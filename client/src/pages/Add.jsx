@@ -10,21 +10,36 @@ const Add = () => {
     price: null,
     cover: "",
   });
+
   const [error, setError] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
-
   const navigate = useNavigate();
 
   const handleChange = (e) => {
     setBook((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      const imageUrl = URL.createObjectURL(file);
-      setImagePreview(imageUrl); // for preview
-      setBook((prev) => ({ ...prev, cover: imageUrl })); // store as string (not permanent)
+    if (!file) return;
+
+    setImagePreview(URL.createObjectURL(file)); // For preview
+
+    const formData = new FormData();
+    formData.append("image", file);
+
+    try {
+      const res = await axios.post(`${API_BASE_URL}/upload`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      // Set public image URL returned from backend
+      setBook((prev) => ({ ...prev, cover: res.data.imageUrl }));
+    } catch (err) {
+      console.error("Image upload failed:", err);
+      setError(true);
     }
   };
 
@@ -51,7 +66,6 @@ const Add = () => {
       />
       <textarea
         rows={5}
-        type="text"
         placeholder="Book description"
         name="desc"
         onChange={handleChange}
@@ -63,22 +77,23 @@ const Add = () => {
         onChange={handleChange}
       />
 
-      {/* Optional: Allow paste URL directly */}
+      {/* Optional: Paste image URL manually */}
       <input
         type="text"
         placeholder="Or paste image URL"
         name="cover"
+        value={book.cover}
         onChange={handleChange}
       />
 
-      {/* File upload input */}
+      {/* Upload image file */}
       <input
         type="file"
         accept="image/*"
         onChange={handleImageUpload}
       />
 
-      {/* Image preview */}
+      {/* Preview uploaded image */}
       {imagePreview && (
         <img
           src={imagePreview}
@@ -88,7 +103,7 @@ const Add = () => {
       )}
 
       <button onClick={handleClick}>Add</button>
-      {error && "Something went wrong!"}
+      {error && <p style={{ color: "red" }}>Something went wrong!</p>}
       <br />
       <Link to="/">See all books</Link>
     </div>
